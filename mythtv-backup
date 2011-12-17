@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Simple backup script for my MythTV box(en)
+
+MYTHFOLDER=/mythtv
+SINK=rsync://mythtv@drobo.homenet/mythtv/`hostname`
+RFLAGS="-av --delete --password-file=${HOME}/.rsyncpassword"
+EXCLUDE_FILE=/tmp/mythtv-backup.exclude
+
+## TASK: Copy current crontab
+crontab -l > $HOME/crontab-current
+
+
+## TASK: Backup userdir
+rsync ${RFLAGS} ${HOME} ${SINK}
+#rsync -av --delete --password-file=${HOME}/.rsyncpassword ${HOME} ${SINK}
+
+
+## TASK: Backup MythTV folders
+# What directories are mounted (looks in fstab) because the remote files should be
+# backed-up in some other process.
+grep -E "[[:space:]]${MYTHFOLDER}/" /etc/fstab | grep -vE '^[[:space:]]*#' | cut -f2 -d' ' > ${EXCLUDE_FILE}
+
+# Rsync the ${MYTHFOLDER} and exclude the folders that are in the fstab
+rsync ${RFLAGS} --exclude-from=${EXCLUDE_FILE} ${MYTHFOLDER} ${SINK}
+
+## END
